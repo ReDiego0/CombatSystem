@@ -1,0 +1,4 @@
+name: CombatSystem
+version: '1.0.0'
+main: org.ReDiego0.combatSystem.CombatSystem
+api-version: '1.21'
