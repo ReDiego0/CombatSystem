@@ -2,3 +2,28 @@ name: CombatSystem
 version: '1.0.0'
 main: org.ReDiego0.combatSystem.CombatSystem
 api-version: '1.21'
+description: 'Classless looter-shooter combat system for geopolitical servers'
+author: ReDiego0
+website: 'https://github.com/ReDiego0'
+
+# Soft dependencies - plugin works without these
+softdepend:
+  - WorldGuard
+  - TownyAdvanced
+
+# Plugin commands
+commands:
+  combatsystem:
+    description: 'Main CombatSystem command'
+    usage: '/<command> [reload]'
+    aliases: ['cs', 'combat']
+    permission: 'combatsystem.use'
+
+# Permissions
+permissions:
+  combatsystem.use:
+    description: 'Allows use of basic CombatSystem commands'
+    default: true
+  combatsystem.admin:
+    description: 'Allows administrative commands (reload, etc.)'
+    default: op
