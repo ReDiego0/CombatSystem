@@ -2,6 +2,8 @@ package org.ReDiego0.combatSystem
 
 import org.ReDiego0.combatSystem.config.ConfigManager
 import org.ReDiego0.combatSystem.core.PDCUtil
+import org.ReDiego0.combatSystem.item.PoolRegistry
+import org.ReDiego0.combatSystem.item.WeaponRegistry
 import org.ReDiego0.combatSystem.listener.WorldIsolationListener
 import org.ReDiego0.combatSystem.world.SafeZoneManager
 import org.ReDiego0.combatSystem.world.WorldIsolation
@@ -22,6 +24,10 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var safeZoneManager: SafeZoneManager
         private set
+    lateinit var weaponRegistry: WeaponRegistry
+        private set
+    lateinit var poolRegistry: PoolRegistry
+        private set
 
     override fun onEnable() {
         instance = this
@@ -35,6 +41,7 @@ class CombatSystem : JavaPlugin() {
         initializePDC()
         initializeWorldIsolation()
         initializeSafeZones()
+        initializeRegistries()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -78,6 +85,16 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Safe Zone Manager initialized")
     }
 
+    private fun initializeRegistries() {
+        weaponRegistry = WeaponRegistry(this)
+        weaponRegistry.loadAll()
+
+        poolRegistry = PoolRegistry(this)
+        poolRegistry.loadAll()
+
+        logger.info("[CombatSystem] Registries initialized")
+    }
+
     private fun registerCommands() {
         getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
             if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
@@ -107,6 +124,8 @@ class CombatSystem : JavaPlugin() {
         configManager.reload()
         worldIsolation.reload()
         safeZoneManager.clearAll()
+        weaponRegistry.loadAll()
+        poolRegistry.loadAll()
         logger.info("[CombatSystem] Plugin reloaded")
     }
 }
