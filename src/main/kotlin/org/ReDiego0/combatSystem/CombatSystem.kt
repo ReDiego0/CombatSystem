@@ -10,11 +10,7 @@ import org.ReDiego0.combatSystem.core.PDCUtil
 import org.ReDiego0.combatSystem.core.StaminaManager
 import org.ReDiego0.combatSystem.database.DatabaseManager
 import org.ReDiego0.combatSystem.gui.*
-import org.ReDiego0.combatSystem.item.ItemProgression
-import org.ReDiego0.combatSystem.item.PoolRegistry
-import org.ReDiego0.combatSystem.item.TraitEngine
-import org.ReDiego0.combatSystem.item.TraitLoader
-import org.ReDiego0.combatSystem.item.WeaponRegistry
+import org.ReDiego0.combatSystem.item.*
 import org.ReDiego0.combatSystem.listener.*
 import org.ReDiego0.combatSystem.loadout.*
 import org.ReDiego0.combatSystem.world.SafeZoneManager
@@ -69,6 +65,14 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var loadoutEquipper: LoadoutEquipper
         private set
+    lateinit var armorBonusLoader: ArmorBonusLoader
+        private set
+    lateinit var armorLoader: ArmorLoader
+        private set
+    lateinit var armorRegistry: ArmorRegistry
+        private set
+    lateinit var armorPassiveManager: ArmorPassiveManager
+        private set
 
     override fun onEnable() {
         instance = this
@@ -90,6 +94,7 @@ class CombatSystem : JavaPlugin() {
         initializeCombat()
         initializeDash()
         initializeLoadout()
+        initializeArmor()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -259,6 +264,24 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Loadout System initialized")
     }
 
+    private fun initializeArmor() {
+        armorBonusLoader = ArmorBonusLoader(this)
+        armorBonusLoader.loadAll()
+
+        armorLoader = ArmorLoader(this)
+        armorLoader.loadAll()
+
+        armorRegistry = ArmorRegistry(armorLoader, armorBonusLoader)
+
+        val setBonusCalculator = SetBonusCalculator()
+        armorPassiveManager = ArmorPassiveManager(armorRegistry, armorBonusLoader, setBonusCalculator)
+
+        val armorPassiveListener = ArmorPassiveListener(this, armorRegistry, armorPassiveManager)
+        armorPassiveListener.register()
+
+        logger.info("[CombatSystem] Armor System initialized")
+    }
+
     private fun registerCommands() {
         getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
             if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
@@ -294,6 +317,8 @@ class CombatSystem : JavaPlugin() {
         weaponRegistry.loadAll()
         poolRegistry.loadAll()
         traitLoader.loadAll()
+        armorBonusLoader.loadAll()
+        armorLoader.loadAll()
         logger.info("[CombatSystem] Plugin reloaded")
     }
 }
