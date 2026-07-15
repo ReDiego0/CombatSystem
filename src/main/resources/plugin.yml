@@ -6,20 +6,21 @@ description: 'Classless looter-shooter combat system for geopolitical servers'
 author: ReDiego0
 website: 'https://github.com/ReDiego0'
 
-# Soft dependencies - plugin works without these
 softdepend:
   - WorldGuard
   - TownyAdvanced
 
-# Plugin commands
 commands:
   combatsystem:
     description: 'Main CombatSystem command'
     usage: '/<command> [reload]'
     aliases: ['cs', 'combat']
     permission: 'combatsystem.use'
+  arma:
+    description: 'Armory command for weapon modification'
+    usage: '/<command> modificar'
+    permission: 'combatsystem.armory'
 
-# Permissions
 permissions:
   combatsystem.use:
     description: 'Allows use of basic CombatSystem commands'
@@ -27,3 +28,6 @@ permissions:
   combatsystem.admin:
     description: 'Allows administrative commands (reload, etc.)'
     default: op
+  combatsystem.armory:
+    description: 'Allows use of the armory modification command'
+    default: true

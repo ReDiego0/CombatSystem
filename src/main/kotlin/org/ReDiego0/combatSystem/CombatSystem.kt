@@ -3,8 +3,12 @@ package org.ReDiego0.combatSystem
 import org.ReDiego0.combatSystem.config.ConfigManager
 import org.ReDiego0.combatSystem.config.ProgressionConfig
 import org.ReDiego0.combatSystem.core.PDCUtil
+import org.ReDiego0.combatSystem.gui.ArmoryCommandListener
+import org.ReDiego0.combatSystem.gui.ArmoryListener
 import org.ReDiego0.combatSystem.item.ItemProgression
 import org.ReDiego0.combatSystem.item.PoolRegistry
+import org.ReDiego0.combatSystem.item.TraitEngine
+import org.ReDiego0.combatSystem.item.TraitLoader
 import org.ReDiego0.combatSystem.item.WeaponRegistry
 import org.ReDiego0.combatSystem.listener.ItemProgressionListener
 import org.ReDiego0.combatSystem.listener.WorldIsolationListener
@@ -35,6 +39,12 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var itemProgression: ItemProgression
         private set
+    lateinit var traitLoader: TraitLoader
+        private set
+    lateinit var traitEngine: TraitEngine
+        private set
+    lateinit var armoryListener: ArmoryListener
+        private set
 
     override fun onEnable() {
         instance = this
@@ -50,6 +60,7 @@ class CombatSystem : JavaPlugin() {
         initializeSafeZones()
         initializeRegistries()
         initializeProgression()
+        initializeTraits()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -116,6 +127,21 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Item Progression initialized")
     }
 
+    private fun initializeTraits() {
+        traitLoader = TraitLoader(this)
+        traitLoader.loadAll()
+
+        traitEngine = TraitEngine(traitLoader, progressionConfig)
+
+        armoryListener = ArmoryListener(this, traitEngine, traitLoader)
+        armoryListener.register()
+
+        val armoryCommand = ArmoryCommandListener(this, armoryListener)
+        armoryCommand.register()
+
+        logger.info("[CombatSystem] Trait Engine initialized")
+    }
+
     private fun registerCommands() {
         getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
             if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
@@ -148,6 +174,7 @@ class CombatSystem : JavaPlugin() {
         safeZoneManager.clearAll()
         weaponRegistry.loadAll()
         poolRegistry.loadAll()
+        traitLoader.loadAll()
         logger.info("[CombatSystem] Plugin reloaded")
     }
 }
