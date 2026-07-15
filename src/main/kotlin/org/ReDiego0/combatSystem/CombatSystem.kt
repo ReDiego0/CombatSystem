@@ -1,9 +1,12 @@
 package org.ReDiego0.combatSystem
 
 import org.ReDiego0.combatSystem.config.ConfigManager
+import org.ReDiego0.combatSystem.config.ProgressionConfig
 import org.ReDiego0.combatSystem.core.PDCUtil
+import org.ReDiego0.combatSystem.item.ItemProgression
 import org.ReDiego0.combatSystem.item.PoolRegistry
 import org.ReDiego0.combatSystem.item.WeaponRegistry
+import org.ReDiego0.combatSystem.listener.ItemProgressionListener
 import org.ReDiego0.combatSystem.listener.WorldIsolationListener
 import org.ReDiego0.combatSystem.world.SafeZoneManager
 import org.ReDiego0.combatSystem.world.WorldIsolation
@@ -18,6 +21,8 @@ class CombatSystem : JavaPlugin() {
 
     lateinit var configManager: ConfigManager
         private set
+    lateinit var progressionConfig: ProgressionConfig
+        private set
     lateinit var worldIsolation: WorldIsolation
         private set
     lateinit var worldIsolationListener: WorldIsolationListener
@@ -27,6 +32,8 @@ class CombatSystem : JavaPlugin() {
     lateinit var weaponRegistry: WeaponRegistry
         private set
     lateinit var poolRegistry: PoolRegistry
+        private set
+    lateinit var itemProgression: ItemProgression
         private set
 
     override fun onEnable() {
@@ -42,6 +49,7 @@ class CombatSystem : JavaPlugin() {
         initializeWorldIsolation()
         initializeSafeZones()
         initializeRegistries()
+        initializeProgression()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -62,6 +70,10 @@ class CombatSystem : JavaPlugin() {
     private fun initializeConfig() {
         configManager = ConfigManager(this)
         configManager.load()
+
+        progressionConfig = ProgressionConfig(this)
+        progressionConfig.load()
+
         if (configManager.isDebug()) {
             logger.info("[CombatSystem] Debug mode enabled")
         }
@@ -95,6 +107,15 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Registries initialized")
     }
 
+    private fun initializeProgression() {
+        itemProgression = ItemProgression(progressionConfig)
+
+        val progressionListener = ItemProgressionListener(this, worldIsolation, configManager, itemProgression)
+        progressionListener.register()
+
+        logger.info("[CombatSystem] Item Progression initialized")
+    }
+
     private fun registerCommands() {
         getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
             if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
@@ -122,6 +143,7 @@ class CombatSystem : JavaPlugin() {
 
     fun reloadPlugin() {
         configManager.reload()
+        progressionConfig.reload()
         worldIsolation.reload()
         safeZoneManager.clearAll()
         weaponRegistry.loadAll()

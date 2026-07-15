@@ -15,4 +15,5 @@ object PDCKeys {
     val DEFENSE = PDCUtil.key("defense")
     val HP_BONUS = PDCUtil.key("hp_bonus")
     val TRAIT_POOL = PDCUtil.key("trait_pool")
+    val ITEM_XP = PDCUtil.key("item_xp")
 }
