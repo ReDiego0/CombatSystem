@@ -1,18 +1,24 @@
 package org.ReDiego0.combatSystem
 
+import org.ReDiego0.combatSystem.combat.ActionbarHUD
+import org.ReDiego0.combatSystem.combat.CombatManager
+import org.ReDiego0.combatSystem.combat.TacticalDash
 import org.ReDiego0.combatSystem.config.ConfigManager
 import org.ReDiego0.combatSystem.config.ProgressionConfig
+import org.ReDiego0.combatSystem.config.SupportItemConfig
 import org.ReDiego0.combatSystem.core.PDCUtil
-import org.ReDiego0.combatSystem.gui.ArmoryCommandListener
-import org.ReDiego0.combatSystem.gui.ArmoryListener
+import org.ReDiego0.combatSystem.core.StaminaManager
+import org.ReDiego0.combatSystem.database.DatabaseManager
+import org.ReDiego0.combatSystem.gui.*
 import org.ReDiego0.combatSystem.item.ItemProgression
 import org.ReDiego0.combatSystem.item.PoolRegistry
 import org.ReDiego0.combatSystem.item.TraitEngine
 import org.ReDiego0.combatSystem.item.TraitLoader
 import org.ReDiego0.combatSystem.item.WeaponRegistry
-import org.ReDiego0.combatSystem.listener.ItemProgressionListener
-import org.ReDiego0.combatSystem.listener.WorldIsolationListener
+import org.ReDiego0.combatSystem.listener.*
+import org.ReDiego0.combatSystem.loadout.*
 import org.ReDiego0.combatSystem.world.SafeZoneManager
+import org.ReDiego0.combatSystem.world.TownyIntegration
 import org.ReDiego0.combatSystem.world.WorldIsolation
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -26,6 +32,8 @@ class CombatSystem : JavaPlugin() {
     lateinit var configManager: ConfigManager
         private set
     lateinit var progressionConfig: ProgressionConfig
+        private set
+    lateinit var supportItemConfig: SupportItemConfig
         private set
     lateinit var worldIsolation: WorldIsolation
         private set
@@ -45,6 +53,22 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var armoryListener: ArmoryListener
         private set
+    lateinit var staminaManager: StaminaManager
+        private set
+    lateinit var combatManager: CombatManager
+        private set
+    lateinit var actionbarHUD: ActionbarHUD
+        private set
+    lateinit var townyIntegration: TownyIntegration
+        private set
+    lateinit var tacticalDash: TacticalDash
+        private set
+    lateinit var databaseManager: DatabaseManager
+        private set
+    lateinit var loadoutManager: LoadoutManager
+        private set
+    lateinit var loadoutEquipper: LoadoutEquipper
+        private set
 
     override fun onEnable() {
         instance = this
@@ -56,16 +80,22 @@ class CombatSystem : JavaPlugin() {
 
         initializeConfig()
         initializePDC()
+        initializeDatabase()
         initializeWorldIsolation()
         initializeSafeZones()
+        initializeTowny()
         initializeRegistries()
         initializeProgression()
         initializeTraits()
+        initializeCombat()
+        initializeDash()
+        initializeLoadout()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
         logger.info("[CombatSystem] World Isolation Mode: ${configManager.getIsolationMode()}")
         logger.info("[CombatSystem] Safe Zones: ${if (configManager.isSafeZonesEnabled()) "ENABLED" else "DISABLED"}")
+        logger.info("[CombatSystem] Towny: ${if (townyIntegration.isAvailable()) "ENABLED" else "DISABLED"}")
     }
 
     override fun onDisable() {
@@ -74,6 +104,9 @@ class CombatSystem : JavaPlugin() {
         }
         if (::worldIsolationListener.isInitialized) {
             worldIsolationListener.clearSafeZones()
+        }
+        if (::databaseManager.isInitialized) {
+            databaseManager.close()
         }
         logger.info("[CombatSystem] Plugin disabled successfully!")
     }
@@ -85,6 +118,9 @@ class CombatSystem : JavaPlugin() {
         progressionConfig = ProgressionConfig(this)
         progressionConfig.load()
 
+        supportItemConfig = SupportItemConfig(this)
+        supportItemConfig.load()
+
         if (configManager.isDebug()) {
             logger.info("[CombatSystem] Debug mode enabled")
         }
@@ -93,6 +129,12 @@ class CombatSystem : JavaPlugin() {
     private fun initializePDC() {
         PDCUtil.init(this)
         logger.info("[CombatSystem] PDCUtil initialized")
+    }
+
+    private fun initializeDatabase() {
+        databaseManager = DatabaseManager(this)
+        databaseManager.init()
+        logger.info("[CombatSystem] Database initialized")
     }
 
     private fun initializeWorldIsolation() {
@@ -106,6 +148,12 @@ class CombatSystem : JavaPlugin() {
         safeZoneManager = SafeZoneManager(this, configManager, worldIsolationListener)
         safeZoneManager.init()
         logger.info("[CombatSystem] Safe Zone Manager initialized")
+    }
+
+    private fun initializeTowny() {
+        townyIntegration = TownyIntegration(this)
+        townyIntegration.init()
+        logger.info("[CombatSystem] Towny Integration initialized")
     }
 
     private fun initializeRegistries() {
@@ -142,6 +190,75 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Trait Engine initialized")
     }
 
+    private fun initializeCombat() {
+        staminaManager = StaminaManager()
+        combatManager = CombatManager()
+        actionbarHUD = ActionbarHUD(staminaManager, combatManager)
+
+        val combatInputListener = CombatInputListener(this, worldIsolation, configManager, staminaManager, combatManager, actionbarHUD, townyIntegration)
+        combatInputListener.register()
+
+        server.scheduler.runTaskTimer(this, Runnable {
+            for (player in server.onlinePlayers) {
+                staminaManager.regenerateStamina(player)
+                actionbarHUD.update(player)
+            }
+        }, 20L, 20L)
+
+        logger.info("[CombatSystem] Combat System initialized")
+    }
+
+    private fun initializeDash() {
+        tacticalDash = TacticalDash(worldIsolation, townyIntegration, staminaManager)
+
+        val dashInputListener = DashInputListener(this, tacticalDash)
+        dashInputListener.register()
+
+        logger.info("[CombatSystem] Tactical Dash initialized")
+    }
+
+    private fun initializeLoadout() {
+        val loadoutStorage = LoadoutStorage(this, databaseManager)
+        val resourceStorage = ResourceStorage(this, databaseManager)
+
+        loadoutManager = LoadoutManager(loadoutStorage, resourceStorage)
+        loadoutEquipper = LoadoutEquipper(this, loadoutManager, townyIntegration)
+
+        val loadoutGUI = LoadoutGUI(loadoutManager)
+        val loadoutListener = LoadoutListener(this, loadoutManager, loadoutGUI)
+        loadoutListener.register()
+
+        val supportBagGUI = SupportBagGUI(loadoutManager)
+        val supportBagListener = SupportBagListener(this, loadoutManager, supportBagGUI)
+        supportBagListener.register()
+
+        val loadoutTownyListener = LoadoutTownyListener(this, townyIntegration, loadoutEquipper, loadoutManager)
+        loadoutTownyListener.register()
+
+        val loadoutDeathListener = LoadoutDeathListener(this, loadoutEquipper, loadoutManager, townyIntegration)
+        loadoutDeathListener.register()
+
+        val loadoutDisconnectListener = LoadoutDisconnectListener(this, loadoutEquipper, loadoutManager)
+        loadoutDisconnectListener.register()
+
+        getCommand("loadout")?.setExecutor { sender, command, label, args ->
+            if (sender !is org.bukkit.entity.Player) {
+                sender.sendMessage("§c[Loadout] This command can only be used by players.")
+                return@setExecutor true
+            }
+
+            if (!sender.hasPermission("combatsystem.loadout")) {
+                sender.sendMessage("§c[Loadout] You don't have permission to use this command.")
+                return@setExecutor true
+            }
+
+            loadoutGUI.open(sender)
+            true
+        }
+
+        logger.info("[CombatSystem] Loadout System initialized")
+    }
+
     private fun registerCommands() {
         getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
             if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
@@ -165,11 +282,13 @@ class CombatSystem : JavaPlugin() {
             }
             emptyList()
         }
+
     }
 
     fun reloadPlugin() {
         configManager.reload()
         progressionConfig.reload()
+        supportItemConfig.reload()
         worldIsolation.reload()
         safeZoneManager.clearAll()
         weaponRegistry.loadAll()

@@ -21,6 +21,9 @@ dependencies {
     // Kotlin Standard Library
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
+    // SQLite JDBC
+    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
+
     // WorldGuard & TownyAdvanced are handled via reflection at runtime (soft dependencies)
     // No compile-time dependency needed - avoids SSL/build issues with external repos
 }

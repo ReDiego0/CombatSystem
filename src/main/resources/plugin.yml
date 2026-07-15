@@ -20,6 +20,11 @@ commands:
     description: 'Armory command for weapon modification'
     usage: '/<command> modificar'
     permission: 'combatsystem.armory'
+  loadout:
+    description: 'Loadout management command'
+    usage: '/<command>'
+    aliases: ['lo']
+    permission: 'combatsystem.loadout'
 
 permissions:
   combatsystem.use:
@@ -30,4 +35,7 @@ permissions:
     default: op
   combatsystem.armory:
     description: 'Allows use of the armory modification command'
+    default: true
+  combatsystem.loadout:
+    description: 'Allows use of the loadout command'
     default: true
