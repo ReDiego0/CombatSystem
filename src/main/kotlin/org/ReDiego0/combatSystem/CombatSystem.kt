@@ -4,6 +4,7 @@ import org.ReDiego0.combatSystem.combat.ActionbarHUD
 import org.ReDiego0.combatSystem.combat.CombatManager
 import org.ReDiego0.combatSystem.combat.TacticalDash
 import org.ReDiego0.combatSystem.config.ConfigManager
+import org.ReDiego0.combatSystem.config.PVPConfig
 import org.ReDiego0.combatSystem.config.ProgressionConfig
 import org.ReDiego0.combatSystem.config.SupportItemConfig
 import org.ReDiego0.combatSystem.core.PDCUtil
@@ -14,6 +15,7 @@ import org.ReDiego0.combatSystem.item.*
 import org.ReDiego0.combatSystem.listener.*
 import org.ReDiego0.combatSystem.loadout.*
 import org.ReDiego0.combatSystem.loot.*
+import org.ReDiego0.combatSystem.pvp.*
 import org.ReDiego0.combatSystem.anti.*
 import org.ReDiego0.combatSystem.command.*
 import org.ReDiego0.combatSystem.world.SafeZoneManager
@@ -83,6 +85,10 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var antiExploitManager: AntiExploitManager
         private set
+    lateinit var pvpManager: PVPManager
+        private set
+    lateinit var pvpLootLoader: PVPLootLoader
+        private set
 
     override fun onEnable() {
         instance = this
@@ -107,6 +113,7 @@ class CombatSystem : JavaPlugin() {
         initializeArmor()
         initializeLoot()
         initializeAntiExploit()
+        initializePVP()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -328,6 +335,28 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Anti-Exploit System initialized")
     }
 
+    private fun initializePVP() {
+        val pvpConfig = PVPConfig(this)
+        pvpConfig.load()
+
+        val pvpXPCalculator = PVPXPCalculator(this)
+        pvpLootLoader = PVPLootLoader(this)
+        pvpLootLoader.loadAll()
+
+        val lootRoller = LootRoller()
+        val lostLootStash = LostLootStash(this, databaseManager)
+        val lootDelivery = LootDelivery(this, loadoutManager, weaponRegistry, armorLoader, supportItemConfig, lostLootStash)
+        val lootNotification = LootNotification()
+
+        pvpManager = PVPManager(this, pvpXPCalculator, pvpLootLoader, lootRoller, lootDelivery, lootNotification, worldIsolation, townyIntegration)
+        pvpManager.loadConfig(pvpConfig.config)
+
+        val pvpKillListener = PVPKillListener(this, pvpManager)
+        pvpKillListener.register()
+
+        logger.info("[CombatSystem] PVP System initialized")
+    }
+
     private fun registerCommands() {
         val adminCommand = AdminCommand(this, weaponRegistry, armorLoader, loadoutManager)
         adminCommand.register()
@@ -344,6 +373,7 @@ class CombatSystem : JavaPlugin() {
         traitLoader.loadAll()
         armorBonusLoader.loadAll()
         armorLoader.loadAll()
+        pvpLootLoader.loadAll()
         logger.info("[CombatSystem] Plugin reloaded")
     }
 }
