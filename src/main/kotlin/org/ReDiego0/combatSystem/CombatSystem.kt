@@ -14,6 +14,8 @@ import org.ReDiego0.combatSystem.item.*
 import org.ReDiego0.combatSystem.listener.*
 import org.ReDiego0.combatSystem.loadout.*
 import org.ReDiego0.combatSystem.loot.*
+import org.ReDiego0.combatSystem.anti.*
+import org.ReDiego0.combatSystem.command.*
 import org.ReDiego0.combatSystem.world.SafeZoneManager
 import org.ReDiego0.combatSystem.world.TownyIntegration
 import org.ReDiego0.combatSystem.world.WorldIsolation
@@ -79,6 +81,8 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var lootEngine: LootEngine
         private set
+    lateinit var antiExploitManager: AntiExploitManager
+        private set
 
     override fun onEnable() {
         instance = this
@@ -102,6 +106,7 @@ class CombatSystem : JavaPlugin() {
         initializeLoadout()
         initializeArmor()
         initializeLoot()
+        initializeAntiExploit()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -309,30 +314,23 @@ class CombatSystem : JavaPlugin() {
         logger.info("[CombatSystem] Loot System initialized")
     }
 
+    private fun initializeAntiExploit() {
+        val spawnTracker = SpawnTracker()
+        val bossDamageTracker = BossDamageTracker()
+        val downscalingManager = DownscalingManager(this)
+
+        antiExploitManager = AntiExploitManager(this, spawnTracker, bossDamageTracker, downscalingManager)
+        antiExploitManager.init()
+
+        val exploitListener = ExploitListener(this, antiExploitManager, downscalingManager)
+        exploitListener.register()
+
+        logger.info("[CombatSystem] Anti-Exploit System initialized")
+    }
+
     private fun registerCommands() {
-        getCommand("combatsystem")?.setExecutor { sender, command, label, args ->
-            if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
-                if (sender.hasPermission("combatsystem.admin")) {
-                    reloadPlugin()
-                    sender.sendMessage("§a[CombatSystem] Configuration reloaded successfully!")
-                } else {
-                    sender.sendMessage("§c[CombatSystem] You don't have permission to do this.")
-                }
-                return@setExecutor true
-            }
-
-            sender.sendMessage("§6[CombatSystem] §fVersion ${pluginMeta.version}")
-            sender.sendMessage("§7Use §e/cs reload §7to reload configuration.")
-            true
-        }
-
-        getCommand("combatsystem")?.setTabCompleter { sender, command, alias, args ->
-            if (args.size == 1) {
-                return@setTabCompleter listOf("reload").filter { it.startsWith(args[0], ignoreCase = true) }
-            }
-            emptyList()
-        }
-
+        val adminCommand = AdminCommand(this, weaponRegistry, armorLoader, loadoutManager)
+        adminCommand.register()
     }
 
     fun reloadPlugin() {

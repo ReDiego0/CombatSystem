@@ -13,7 +13,7 @@ softdepend:
 commands:
   combatsystem:
     description: 'Main CombatSystem command'
-    usage: '/<command> [reload]'
+    usage: '/<command> [reload|giveweapon|givearmor]'
     aliases: ['cs', 'combat']
     permission: 'combatsystem.use'
   arma:
@@ -32,6 +32,9 @@ permissions:
     default: true
   combatsystem.admin:
     description: 'Allows administrative commands (reload, etc.)'
+    default: op
+  combatsystem.admin.give:
+    description: 'Allows giving weapons and armor to players'
     default: op
   combatsystem.armory:
     description: 'Allows use of the armory modification command'
