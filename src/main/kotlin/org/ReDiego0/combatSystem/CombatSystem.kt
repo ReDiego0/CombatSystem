@@ -13,9 +13,11 @@ import org.ReDiego0.combatSystem.gui.*
 import org.ReDiego0.combatSystem.item.*
 import org.ReDiego0.combatSystem.listener.*
 import org.ReDiego0.combatSystem.loadout.*
+import org.ReDiego0.combatSystem.loot.*
 import org.ReDiego0.combatSystem.world.SafeZoneManager
 import org.ReDiego0.combatSystem.world.TownyIntegration
 import org.ReDiego0.combatSystem.world.WorldIsolation
+import org.ReDiego0.combatSystem.world.RegionChecker
 import org.bukkit.plugin.java.JavaPlugin
 
 class CombatSystem : JavaPlugin() {
@@ -73,6 +75,10 @@ class CombatSystem : JavaPlugin() {
         private set
     lateinit var armorPassiveManager: ArmorPassiveManager
         private set
+    lateinit var regionChecker: RegionChecker
+        private set
+    lateinit var lootEngine: LootEngine
+        private set
 
     override fun onEnable() {
         instance = this
@@ -95,6 +101,7 @@ class CombatSystem : JavaPlugin() {
         initializeDash()
         initializeLoadout()
         initializeArmor()
+        initializeLoot()
         registerCommands()
 
         logger.info("[CombatSystem] Plugin enabled successfully!")
@@ -280,6 +287,26 @@ class CombatSystem : JavaPlugin() {
         armorPassiveListener.register()
 
         logger.info("[CombatSystem] Armor System initialized")
+    }
+
+    private fun initializeLoot() {
+        regionChecker = RegionChecker(this)
+        regionChecker.init()
+
+        val mobLevelResolver = MobLevelResolver(this, regionChecker)
+        val lootRoller = LootRoller()
+        val lostLootStash = LostLootStash(this, databaseManager)
+        lostLootStash.init()
+
+        val lootDelivery = LootDelivery(this, loadoutManager, weaponRegistry, armorLoader, supportItemConfig, lostLootStash)
+        val lootNotification = LootNotification()
+
+        lootEngine = LootEngine(this, poolRegistry, lootRoller, lootDelivery, lootNotification, mobLevelResolver, regionChecker, worldIsolation)
+
+        val lootMobKillListener = LootMobKillListener(this, lootEngine)
+        lootMobKillListener.register()
+
+        logger.info("[CombatSystem] Loot System initialized")
     }
 
     private fun registerCommands() {
